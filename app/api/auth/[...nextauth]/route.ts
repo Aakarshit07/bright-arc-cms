@@ -48,43 +48,27 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24 hours
+    maxAge: 24 * 60 * 60,
   },
   pages: {
     signIn: "/login",
-    error: "/login", // Redirect errors to login page
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.username = user.username;
+        token.username = user?.username;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.username = token.username as string;
-        session.user.id = token.sub as string;
+        session.user.id = token.sub as string; // ← Now TypeScript knows about id
       }
       return session;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
-  // Add these for production
-  debug: process.env.NODE_ENV === "development",
-  logger: {
-    error(code, metadata) {
-      console.error("NextAuth Error:", code, metadata);
-    },
-    warn(code) {
-      console.warn("NextAuth Warning:", code);
-    },
-    debug(code, metadata) {
-      if (process.env.NODE_ENV === "development") {
-        console.log("NextAuth Debug:", code, metadata);
-      }
-    },
-  },
 };
 
 const handler = NextAuth(authOptions);
