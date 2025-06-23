@@ -77,10 +77,13 @@ class ApiClient {
     });
   }
 
-  async deleteCategory(urlKey: string): Promise<ApiResponse<Category>> {
-    return this.makeRequest(`${this.backendUrl}/api/categories/${urlKey}`, {
-      method: "DELETE",
-    });
+  async deleteCategory(categoryName: string): Promise<ApiResponse<Category>> {
+    return this.makeRequest(
+      `${this.backendUrl}/api/categories/${categoryName}`,
+      {
+        method: "DELETE",
+      }
+    );
   }
 
   // Blog methods

@@ -108,7 +108,7 @@ export default function CategoriesPage() {
   };
 
   const handleDelete = async (urlKey: string, categoryName: string) => {
-    const success = await deleteCategory(urlKey);
+    const success = await deleteCategory(categoryName);
     if (success) {
       toast({
         title: "Category deleted",

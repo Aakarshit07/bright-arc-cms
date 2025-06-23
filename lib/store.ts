@@ -37,7 +37,7 @@ interface CategoryState {
   fetchCategories: () => Promise<void>;
   createCategory: (categoryName: string) => Promise<boolean>;
   updateCategory: (urlKey: string, categoryName: string) => Promise<boolean>;
-  deleteCategory: (urlKey: string) => Promise<boolean>;
+  deleteCategory: (categoryName: string) => Promise<boolean>;
 }
 
 export const useBlogStore = create<BlogState>((set, get) => ({
@@ -233,10 +233,10 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
     }
   },
 
-  deleteCategory: async (urlKey) => {
+  deleteCategory: async (categoryName) => {
     set({ isLoading: true });
     try {
-      const result = await apiClient.deleteCategory(urlKey);
+      const result = await apiClient.deleteCategory(categoryName);
       if (result.error) {
         set({ isLoading: false, error: result.error });
         return false;
