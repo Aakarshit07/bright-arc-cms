@@ -10,28 +10,39 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useCommentStore, useBlogStore } from "@/lib/store";
+import { useCommentStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Check, X } from "lucide-react";
-import { MessageSquare } from "lucide-react"; // Import MessageSquare here
+import { Check, X, MessageSquare } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { BlogsByCategory } from "@/components/blogs-by-category";
+import type { Blog } from "@/lib/types";
 
 export default function CommentsPage() {
   const { comments, isLoading, fetchComments, updateCommentStatus } =
     useCommentStore();
-  const { blogs, fetchBlogs } = useBlogStore();
   const { toast } = useToast();
-  const [selectedBlog, setSelectedBlog] = useState<string>("");
-
-  useEffect(() => {
-    fetchBlogs();
-  }, [fetchBlogs]);
+  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
 
   useEffect(() => {
     if (selectedBlog) {
-      fetchComments(selectedBlog);
+      fetchComments(selectedBlog.slug);
     }
   }, [selectedBlog, fetchComments]);
+
+  const handleBlogSelect = (blog: Blog) => {
+    setSelectedBlog(blog);
+  };
 
   const handleStatusUpdate = async (
     commentId: string,
@@ -39,7 +50,11 @@ export default function CommentsPage() {
   ) => {
     if (!selectedBlog) return;
 
-    const success = await updateCommentStatus(selectedBlog, commentId, status);
+    const success = await updateCommentStatus(
+      selectedBlog.slug,
+      commentId,
+      status
+    );
 
     if (success) {
       toast({
@@ -75,44 +90,49 @@ export default function CommentsPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Blog</CardTitle>
-          <CardDescription>
-            Choose a blog to view and moderate its comments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-            {blogs.map((blog) => (
-              <Button
-                key={blog._id}
-                variant={selectedBlog === blog.slug ? "default" : "outline"}
-                className="justify-start h-auto p-3"
-                onClick={() => setSelectedBlog(blog.slug)}
-              >
-                <div className="text-left">
-                  <div className="font-medium truncate">{blog.title}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {blog.commentCount} comments
-                  </div>
-                </div>
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {selectedBlog && (
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+        {/* Left Column - Blogs by Category using Tabs */}
+        <Card className="overflow-hidden">
           <CardHeader>
-            <CardTitle>Comments</CardTitle>
+            <CardTitle className="flex items-center">
+              <MessageSquare className="mr-2 h-5 w-5" />
+              Blogs by Category
+            </CardTitle>
             <CardDescription>
-              Comments for the selected blog post
+              Select a blog to view and moderate its comments
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            <BlogsByCategory
+              onBlogSelect={handleBlogSelect}
+              selectedBlogSlug={selectedBlog?.slug}
+              showCommentCount={true}
+              cardSize="sm"
+              variant="list"
+            />
+          </CardContent>
+        </Card>
+
+        {/* Right Column - Comments */}
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <CardTitle>Comments</CardTitle>
+            <CardDescription>
+              {selectedBlog
+                ? `Comments for "${selectedBlog.title}"`
+                : "Select a blog to view comments"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="overflow-y-auto max-h-[calc(100vh-300px)]">
+            {!selectedBlog ? (
+              <div className="text-center py-8">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Select a blog</h3>
+                <p className="text-muted-foreground">
+                  Choose a blog from the left to view its comments
+                </p>
+              </div>
+            ) : isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <LoadingSpinner size="lg" />
               </div>
@@ -126,51 +146,119 @@ export default function CommentsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {comments.map((comment) => (
-                  <div key={comment._id} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h4 className="font-medium">{comment.user}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(comment.date).toLocaleDateString()}
-                        </p>
+                {/* Sort comments to show pending ones first */}
+                {comments
+                  .sort((a, b) => {
+                    if (a.status === "pending" && b.status !== "pending")
+                      return -1;
+                    if (a.status !== "pending" && b.status === "pending")
+                      return 1;
+                    return (
+                      new Date(b.date).getTime() - new Date(a.date).getTime()
+                    );
+                  })
+                  .map((comment) => (
+                    <div
+                      key={comment._id}
+                      className="border rounded-lg p-4 space-y-3"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-medium">{comment.user}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(comment.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {getStatusBadge(comment.status)}
                       </div>
-                      {getStatusBadge(comment.status)}
+
+                      <p className="text-sm bg-muted p-3 rounded-md">
+                        {comment.text}
+                      </p>
+
+                      {comment.status === "pending" && (
+                        <div className="flex items-center space-x-2">
+                          {/* Approve Button with Confirmation */}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Check className="mr-2 h-3 w-3" />
+                                Approve
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Approve Comment
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to approve this comment
+                                  from {comment.user}?{"  "}
+                                  <span className="text-black font-mono">
+                                    "{comment.text}"
+                                  </span>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    handleStatusUpdate(comment._id, "approved")
+                                  }
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  Approve Comment
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          {/* Reject Button with Confirmation */}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="destructive">
+                                <X className="mr-2 h-3 w-3" />
+                                Reject
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Reject Comment
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to reject this comment
+                                  from {comment.user}?{"  "}
+                                  <span className="text-black font-mono">
+                                    "{comment.text}"
+                                  </span>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    handleStatusUpdate(comment._id, "rejected")
+                                  }
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Reject Comment
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
                     </div>
-
-                    <p className="text-sm mb-4">{comment.text}</p>
-
-                    {comment.status === "pending" && (
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            handleStatusUpdate(comment._id, "approved")
-                          }
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Check className="mr-2 h-3 w-3" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() =>
-                            handleStatusUpdate(comment._id, "rejected")
-                          }
-                        >
-                          <X className="mr-2 h-3 w-3" />
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </CardContent>
         </Card>
-      )}
+      </div>
     </div>
   );
 }
