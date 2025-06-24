@@ -2,7 +2,8 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -63,7 +64,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.username = token.username as string;
-        session.user.id = token.sub as string; // ← Now TypeScript knows about id
+        session.user.id = token.sub as string;
       }
       return session;
     },
