@@ -97,7 +97,7 @@ export function BlogsByCategory({
       {blogs.map((blog) => (
         <Button
           key={blog._id}
-          variant={selectedBlogSlug === blog.slug ? "default" : "outline"}
+          variant={selectedBlogSlug === blog.slug ? "default" : "outline-solid"}
           className={`justify-start text-left ${getCardSizeClasses()}`}
           onClick={() => onBlogSelect?.(blog)}
         >
