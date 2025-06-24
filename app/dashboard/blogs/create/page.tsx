@@ -98,8 +98,9 @@ export default function CreateEditBlogPage() {
   }
 
   return (
-    <div className="space-y-6 h-[calc(100vh-2rem)]">
-      <div className="flex items-center space-x-4">
+    <div className="space-y-6">
+      {/* NOTE: should take a full height of page */}
+      <div className="flex items-center justify-between space-x-4">
         <Link href="/dashboard/blogs">
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -117,9 +118,9 @@ export default function CreateEditBlogPage() {
           </p>
         </div>
       </div>
-
-      <Card className="h-[calc(100vh-180px)]">
-        <CardHeader className="pb-4">
+      {/* NOTE: should take a full height of the parent as when user enter image url it simply overflowing the card  */}
+      <Card className="">
+        <CardHeader className="pb-">
           <CardTitle>
             {isEditing ? `Edit "${blog?.title || "Blog"}"` : "Blog Details"}
           </CardTitle>

@@ -406,6 +406,7 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
                       placeholder="Enter author name"
                       {...field}
                       disabled={isLoading}
+                      required
                     />
                   </FormControl>
                   <FormMessage />
@@ -423,6 +424,7 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
                     onValueChange={field.onChange}
                     value={field.value}
                     disabled={isLoading || categoriesLoading}
+                    required
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -432,7 +434,9 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
                     <SelectContent>
                       {categories
                         .filter(
-                          (category) => category.activeStatus === "active"
+                          (category) =>
+                            category.activeStatus === "active" &&
+                            category.categoryName !== "unassigned"
                         ) // Only show active categories
                         .map((category) => (
                           <SelectItem key={category._id} value={category._id}>
@@ -463,12 +467,13 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
               name="image"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Featured Image URL (Optional)</FormLabel>
+                  <FormLabel>Featured Image URL</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="https://example.com/image.jpg"
                       {...field}
                       disabled={isLoading}
+                      required
                     />
                   </FormControl>
                   <FormMessage />

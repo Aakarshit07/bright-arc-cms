@@ -107,13 +107,13 @@ export default function SettingsPage() {
             <div>
               <label className="text-sm font-medium">Backend URL</label>
               <p className="text-sm text-muted-foreground">
-                http://localhost:5000
+                {process.env.NEXT_PUBLIC_BACKEND_URL || "localhost:5000"}
               </p>
             </div>
             <div>
               <label className="text-sm font-medium">Categories</label>
               <p className="text-sm text-muted-foreground">
-                10 configured categories
+                ✓ Categories loaded from backend
               </p>
             </div>
           </CardContent>

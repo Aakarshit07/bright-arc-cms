@@ -21,7 +21,7 @@ const navigation = [
   { name: "Blogs", href: "/dashboard/blogs", icon: FileText },
   { name: "Comments", href: "/dashboard/comments", icon: MessageSquare },
   { name: "Categories", href: "/dashboard/categories", icon: Tags },
-  { name: "Contacts", href: "/dashboard/contacts", icon: Mail },
+  { name: "Leads", href: "/dashboard/leads", icon: Mail },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
