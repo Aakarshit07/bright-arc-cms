@@ -234,24 +234,28 @@ export default function CategoriesPage() {
                           : "❌ Inactive"}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        handleEdit(category._id, category.categoryName)
-                      }
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    {category.categoryName !== "unassigned" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          handleEdit(category._id, category.categoryName)
+                        }
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {category.categoryName !== "unassigned" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
