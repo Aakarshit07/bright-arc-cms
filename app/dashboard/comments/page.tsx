@@ -81,6 +81,16 @@ export default function CommentsPage() {
     }
   };
 
+  // Sort comments by date (newest first) and prioritize pending comments
+  const sortedComments = comments.sort((a, b) => {
+    // First, prioritize pending comments
+    if (a.status === "pending" && b.status !== "pending") return -1;
+    if (a.status !== "pending" && b.status === "pending") return 1;
+
+    // Then sort by date (newest first)
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -146,114 +156,104 @@ export default function CommentsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Sort comments to show pending ones first */}
-                {comments
-                  .sort((a, b) => {
-                    if (a.status === "pending" && b.status !== "pending")
-                      return -1;
-                    if (a.status !== "pending" && b.status === "pending")
-                      return 1;
-                    return (
-                      new Date(b.date).getTime() - new Date(a.date).getTime()
-                    );
-                  })
-                  .map((comment) => (
-                    <div
-                      key={comment._id}
-                      className="border rounded-lg p-4 space-y-3"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-medium">{comment.user}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(comment.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        {getStatusBadge(comment.status)}
+                {/* Use sorted comments */}
+                {sortedComments.map((comment) => (
+                  <div
+                    key={comment._id}
+                    className="border rounded-lg p-4 space-y-3"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-medium">{comment.user}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(comment.date).toLocaleDateString()}
+                        </p>
                       </div>
+                      {getStatusBadge(comment.status)}
+                    </div>
 
-                      <p className="text-sm bg-muted p-3 rounded-md">
-                        {comment.text}
-                      </p>
+                    <p className="text-sm bg-muted p-3 rounded-md">
+                      {comment.text}
+                    </p>
 
-                      {comment.status === "pending" && (
-                        <div className="flex items-center space-x-2">
-                          {/* Approve Button with Confirmation */}
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
+                    {comment.status === "pending" && (
+                      <div className="flex items-center space-x-2">
+                        {/* Approve Button with Confirmation */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Check className="mr-2 h-3 w-3" />
+                              Approve
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Approve Comment
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to approve this comment
+                                from {comment.user}? {"  "}
+                                <span className="text-black font-mono">
+                                  "{comment.text}"
+                                </span>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  handleStatusUpdate(comment._id, "approved")
+                                }
                                 className="bg-green-600 hover:bg-green-700"
                               >
-                                <Check className="mr-2 h-3 w-3" />
-                                Approve
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Approve Comment
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to approve this comment
-                                  from {comment.user}?{"  "}
-                                  <span className="text-black font-mono">
-                                    "{comment.text}"
-                                  </span>
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    handleStatusUpdate(comment._id, "approved")
-                                  }
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  Approve Comment
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                Approve Comment
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
 
-                          {/* Reject Button with Confirmation */}
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="destructive">
-                                <X className="mr-2 h-3 w-3" />
-                                Reject
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Reject Comment
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to reject this comment
-                                  from {comment.user}?{"  "}
-                                  <span className="text-black font-mono">
-                                    "{comment.text}"
-                                  </span>
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    handleStatusUpdate(comment._id, "rejected")
-                                  }
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Reject Comment
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        {/* Reject Button with Confirmation */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="destructive">
+                              <X className="mr-2 h-3 w-3" />
+                              Reject
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Reject Comment
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to reject this comment
+                                from {comment.user}?{"  "}
+                                <span className="text-black font-mono">
+                                  "{comment.text}"
+                                </span>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  handleStatusUpdate(comment._id, "rejected")
+                                }
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Reject Comment
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

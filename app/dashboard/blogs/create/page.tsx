@@ -99,7 +99,6 @@ export default function CreateEditBlogPage() {
 
   return (
     <div className="space-y-6">
-      {/* NOTE: should take a full height of page */}
       <div className="flex items-center justify-between space-x-4">
         <Link href="/dashboard/blogs">
           <Button variant="outline" size="sm">
@@ -118,7 +117,6 @@ export default function CreateEditBlogPage() {
           </p>
         </div>
       </div>
-      {/* NOTE: should take a full height of the parent as when user enter image url it simply overflowing the card  */}
       <Card className="">
         <CardHeader className="pb-">
           <CardTitle>

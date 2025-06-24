@@ -52,7 +52,13 @@ export function useBlogsByCategory(): UseBlogsByCategoryReturn {
         setError(result.error);
         setBlogs([]);
       } else {
-        setBlogs(result.data || []);
+        // Sort blogs by postDate in descending order (newest first)
+        const sortedBlogs = (result.data || []).sort((a, b) => {
+          return (
+            new Date(b.postDate).getTime() - new Date(a.postDate).getTime()
+          );
+        });
+        setBlogs(sortedBlogs);
       }
     } catch (err) {
       setError("Failed to fetch blogs");
