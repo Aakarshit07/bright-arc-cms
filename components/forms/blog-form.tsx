@@ -213,6 +213,8 @@ const lexicalStateToHtml = (state: SerializedEditorState): string => {
               }
 
               html += text;
+            } else if (textNode.type === "linebreak") {
+              html += "<br />";
             } else if (textNode.type === "link") {
               html += `<a href="${textNode.url || "#"}">`;
               if (textNode.children) {
