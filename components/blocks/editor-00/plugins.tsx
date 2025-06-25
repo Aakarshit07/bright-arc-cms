@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { ContentEditable } from "@/components/editor/editor-ui/content-editable";
 
 export function Plugins() {
@@ -31,7 +31,7 @@ export function Plugins() {
           ErrorBoundary={LexicalErrorBoundary}
           key={"rich-text-plugin"}
         />
-        {/* editor plugins */}
+        <HistoryPlugin />
       </div>
       {/* actions plugins */}
     </div>
