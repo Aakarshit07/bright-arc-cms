@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import type { SerializedEditorState } from "lexical";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,264 +21,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Editor } from "@/components/blocks/editor-00/editor";
+
 import { useCategoryStore } from "@/lib/store";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { Blog, BlogFormData } from "@/lib/types";
+import { QuillEditor, QuillEditorRef } from "../quill-editor";
 
 const blogSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
-  content: z.string().min(1, "Content is required"),
+  content: z.string().min(10, "Content must be at least 10 characters long"),
   author: z.string().min(1, "Author is required"),
   category: z.string().min(1, "Category is required"),
   image: z.string().url("Invalid URL").optional().or(z.literal("")),
 });
-
-// Helper function to create empty Lexical state
-const createEmptyLexicalState = (): SerializedEditorState => {
-  return {
-    root: {
-      children: [
-        {
-          children: [
-            {
-              detail: 0,
-              format: 0,
-              mode: "normal",
-              style: "",
-              text: "",
-              type: "text",
-              version: 1,
-            },
-          ],
-          direction: "ltr",
-          format: "",
-          indent: 0,
-          type: "paragraph",
-          version: 1,
-        },
-      ],
-      direction: "ltr",
-      format: "",
-      indent: 0,
-      type: "root",
-      version: 1,
-    },
-  } as unknown as SerializedEditorState;
-};
-
-// Helper function to convert HTML to Lexical initial state
-const htmlToLexicalState = (html: string): SerializedEditorState => {
-  if (!html || html.trim() === "" || html === "<p></p>") {
-    return createEmptyLexicalState();
-  }
-
-  try {
-    // Simple HTML to Lexical conversion
-    const textContent = html
-      .replace(/<[^>]*>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (!textContent) {
-      return createEmptyLexicalState();
-    }
-
-    // Split by common HTML elements to create paragraphs
-    const paragraphs = html
-      .split(/<\/p>|<br\s*\/?>|<\/div>|<\/h[1-6]>/)
-      .filter((p) => {
-        const text = p.replace(/<[^>]*>/g, "").trim();
-        return text.length > 0;
-      });
-
-    const children = paragraphs.map((paragraph, index) => {
-      const text = paragraph.replace(/<[^>]*>/g, "").trim();
-      const isBold =
-        paragraph.includes("<strong>") || paragraph.includes("<b>");
-      const isItalic = paragraph.includes("<em>") || paragraph.includes("<i>");
-
-      let format = 0;
-      if (isBold) format |= 1;
-      if (isItalic) format |= 2;
-
-      // Check if it's a heading
-      const headingMatch = paragraph.match(/<h([1-6])[^>]*>/i);
-      if (headingMatch) {
-        return {
-          children: [
-            {
-              detail: 0,
-              format,
-              mode: "normal",
-              style: "",
-              text,
-              type: "text",
-              version: 1,
-            },
-          ],
-          direction: "ltr",
-          format: "",
-          indent: 0,
-          type: "heading",
-          tag: `h${headingMatch[1]}`,
-          version: 1,
-        };
-      }
-
-      return {
-        children: [
-          {
-            detail: 0,
-            format,
-            mode: "normal",
-            style: "",
-            text,
-            type: "text",
-            version: 1,
-          },
-        ],
-        direction: "ltr",
-        format: "",
-        indent: 0,
-        type: "paragraph",
-        version: 1,
-      };
-    });
-
-    return {
-      root: {
-        children:
-          children.length > 0
-            ? children
-            : [
-                {
-                  children: [
-                    {
-                      detail: 0,
-                      format: 0,
-                      mode: "normal",
-                      style: "",
-                      text: textContent,
-                      type: "text",
-                      version: 1,
-                    },
-                  ],
-                  direction: "ltr",
-                  format: "",
-                  indent: 0,
-                  type: "paragraph",
-                  version: 1,
-                },
-              ],
-        direction: "ltr",
-        format: "",
-        indent: 0,
-        type: "root",
-        version: 1,
-      },
-    } as unknown as SerializedEditorState;
-  } catch (error) {
-    console.error("Error converting HTML to Lexical state:", error);
-    return createEmptyLexicalState();
-  }
-};
-
-// Helper function to convert Lexical state to HTML
-const lexicalStateToHtml = (state: SerializedEditorState): string => {
-  try {
-    if (!state || !state.root || !state.root.children) {
-      return "<p></p>";
-    }
-
-    const root = state.root;
-    let html = "";
-
-    root.children.forEach((child: any) => {
-      if (child.type === "paragraph") {
-        html += "<p>";
-        if (child.children && child.children.length > 0) {
-          child.children.forEach((textNode: any) => {
-            if (textNode.type === "text") {
-              let text = textNode.text || "";
-
-              // Apply formatting based on format flags
-              if (textNode.format) {
-                if (textNode.format & 1) text = `<strong>${text}</strong>`; // Bold
-                if (textNode.format & 2) text = `<em>${text}</em>`; // Italic
-                if (textNode.format & 4) text = `<s>${text}</s>`; // Strikethrough
-                if (textNode.format & 8) text = `<u>${text}</u>`; // Underline
-                if (textNode.format & 16) text = `<code>${text}</code>`; // Code
-              }
-
-              html += text;
-            } else if (textNode.type === "linebreak") {
-              html += "<br />";
-            } else if (textNode.type === "link") {
-              html += `<a href="${textNode.url || "#"}">`;
-              if (textNode.children) {
-                textNode.children.forEach((linkChild: any) => {
-                  if (linkChild.type === "text") {
-                    html += linkChild.text || "";
-                  }
-                });
-              }
-              html += "</a>";
-            }
-          });
-        }
-        html += "</p>";
-      } else if (child.type === "heading") {
-        const level = child.tag || "h1";
-        html += `<${level}>`;
-        if (child.children && child.children.length > 0) {
-          child.children.forEach((textNode: any) => {
-            if (textNode.type === "text") {
-              html += textNode.text || "";
-            }
-          });
-        }
-        html += `</${level}>`;
-      } else if (child.type === "list") {
-        const listTag = child.listType === "number" ? "ol" : "ul";
-        html += `<${listTag}>`;
-        if (child.children && child.children.length > 0) {
-          child.children.forEach((listItem: any) => {
-            if (listItem.type === "listitem") {
-              html += "<li>";
-              if (listItem.children && listItem.children.length > 0) {
-                listItem.children.forEach((textNode: any) => {
-                  if (textNode.type === "text") {
-                    html += textNode.text || "";
-                  }
-                });
-              }
-              html += "</li>";
-            }
-          });
-        }
-        html += `</${listTag}>`;
-      } else if (child.type === "quote") {
-        html += "<blockquote>";
-        if (child.children && child.children.length > 0) {
-          child.children.forEach((textNode: any) => {
-            if (textNode.type === "text") {
-              html += textNode.text || "";
-            }
-          });
-        }
-        html += "</blockquote>";
-      } else if (child.type === "code") {
-        html += `<pre><code>${child.children?.[0]?.text || ""}</code></pre>`;
-      }
-    });
-
-    return html || "<p></p>";
-  } catch (error) {
-    console.error("Error converting Lexical state to HTML:", error);
-    return "<p></p>";
-  }
-};
 
 interface BlogFormProps {
   blog?: Blog;
@@ -293,9 +47,9 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
     fetchCategories,
     isLoading: categoriesLoading,
   } = useCategoryStore();
-  const [editorState, setEditorState] = useState<SerializedEditorState>(
-    blog?.content ? htmlToLexicalState(blog.content) : createEmptyLexicalState()
-  );
+  const editorRef = useRef<QuillEditorRef>(null);
+  const [editorContent, setEditorContent] = useState(blog?.content || "");
+  const [editorKey, setEditorKey] = useState(0); // Force re-mount when needed
 
   const form = useForm<BlogFormData>({
     resolver: zodResolver(blogSchema),
@@ -303,57 +57,82 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
       title: blog?.title || "",
       content: blog?.content || "",
       author: blog?.author || "",
-      category: "", // Will be set after categories load
+      category: "",
       image: blog?.image || "",
     },
   });
 
-  // Fetch categories on component mount
+  // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
 
-  // Set form category value when categories load or blog changes
+  // Set category when categories load and blog exists
   useEffect(() => {
     if (categories.length > 0 && blog?.category) {
-      // Find matching category by comparing lowercase names
       const matchingCategory = categories.find(
         (cat) =>
           cat.categoryName.toLowerCase() ===
-          blog.category.categoryName.toLowerCase()
+          blog.category?.categoryName.toLowerCase()
       );
-
       if (matchingCategory) {
-        // Store the category ID in form for selection, but we'll send lowercase name to backend
         form.setValue("category", matchingCategory._id);
       }
     }
   }, [categories, blog, form]);
 
-  // Update editor state when blog prop changes
+  // Update editor content when blog changes
   useEffect(() => {
-    if (blog?.content) {
-      const lexicalState = htmlToLexicalState(blog.content);
-      setEditorState(lexicalState);
-      form.setValue("content", blog.content);
+    if (blog?.content && blog.content !== editorContent) {
+      setEditorContent(blog.content);
+      // Force editor re-mount to ensure clean state
+      setEditorKey((prev) => prev + 1);
     }
-  }, [blog, form]);
+  }, [blog?.content]);
+
+  const handleEditorChange = (content: string) => {
+    setEditorContent(content);
+    form.setValue("content", content, { shouldValidate: true });
+
+    // Clear content error if user starts typing
+    if (form.formState.errors.content && isContentValid(content)) {
+      form.clearErrors("content");
+    }
+  };
+
+  const isContentValid = (content: string): boolean => {
+    if (!content) return false;
+    // Remove HTML tags and check if there's actual text content
+    const textContent = content.replace(/<[^>]*>/g, "").trim();
+    return textContent.length >= 10;
+  };
 
   const handleSubmit = async (data: BlogFormData) => {
     try {
-      // Find the selected category by ID
+      // Additional validation for empty content
+      if (!isContentValid(data.content)) {
+        form.setError("content", {
+          type: "manual",
+          message: "Content must contain at least 10 characters of text.",
+        });
+        return;
+      }
+
+      // Find selected category and send lowercase name to backend
       const selectedCategory = categories.find(
         (cat) => cat._id === data.category
       );
-
       if (!selectedCategory) {
-        throw new Error("Invalid category selected");
+        form.setError("category", {
+          type: "manual",
+          message: "Please select a valid category.",
+        });
+        return;
       }
 
-      // 🔥 IMPORTANT: Send lowercase category name to backend (matches your schema)
-      const submitData = {
+      const submitData: BlogFormData = {
         ...data,
-        category: selectedCategory.categoryName.toLowerCase(), // Backend expects lowercase category name
+        category: selectedCategory.categoryName.toLowerCase(),
       };
 
       console.log("📤 Submitting blog data:", submitData);
@@ -362,12 +141,6 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
       console.error("❌ Error submitting blog:", error);
       throw error;
     }
-  };
-
-  const handleEditorChange = (value: SerializedEditorState) => {
-    setEditorState(value);
-    const html = lexicalStateToHtml(value);
-    form.setValue("content", html, { shouldValidate: true });
   };
 
   return (
@@ -408,7 +181,6 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
                       placeholder="Enter author name"
                       {...field}
                       disabled={isLoading}
-                      required
                     />
                   </FormControl>
                   <FormMessage />
@@ -426,7 +198,6 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
                     onValueChange={field.onChange}
                     value={field.value}
                     disabled={isLoading || categoriesLoading}
-                    required
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -436,13 +207,10 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
                     <SelectContent>
                       {categories
                         .filter(
-                          (category) =>
-                            category.activeStatus === "active" &&
-                            category.categoryName !== "unassigned"
-                        ) // Only show active categories
+                          (category) => category.activeStatus === "active"
+                        )
                         .map((category) => (
                           <SelectItem key={category._id} value={category._id}>
-                            {/* Display capitalized version for UI, but store ID */}
                             {category.categoryName.charAt(0).toUpperCase() +
                               category.categoryName.slice(1)}
                           </SelectItem>
@@ -455,11 +223,6 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
                       Loading categories...
                     </p>
                   )}
-                  {categories.length === 0 && !categoriesLoading && (
-                    <p className="text-xs text-muted-foreground">
-                      No categories available
-                    </p>
-                  )}
                 </FormItem>
               )}
             />
@@ -469,13 +232,12 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
               name="image"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Featured Image URL</FormLabel>
+                  <FormLabel>Featured Image URL (Optional)</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="https://example.com/image.jpg"
                       {...field}
                       disabled={isLoading}
-                      required
                     />
                   </FormControl>
                   <FormMessage />
@@ -483,7 +245,7 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
               )}
             />
 
-            {/* Preview image if URL is provided */}
+            {/* Image Preview */}
             {form.watch("image") && (
               <div className="space-y-2">
                 <p className="text-sm font-medium">Image Preview:</p>
@@ -498,7 +260,7 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
               </div>
             )}
 
-            {/* Spacer to push button to bottom */}
+            {/* Spacer */}
             <div className="flex-1" />
 
             <Button type="submit" disabled={isLoading} className="w-full">
@@ -507,21 +269,24 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
             </Button>
           </div>
 
-          {/* Right Column - Lexical Editor */}
+          {/* Right Column - Quill Editor */}
           <div className="w-1/2 pl-3">
             <FormField
               control={form.control}
               name="content"
               render={({ field }) => (
-                <FormItem className="h-full flex-1 flex flex-col">
+                <FormItem className="h-full flex flex-col">
                   <FormLabel>Content *</FormLabel>
                   <FormControl className="flex-1">
-                    <div className="h-full border rounded-lg overflow-hidden bg-background">
-                      <Editor
-                        editorSerializedState={editorState}
-                        onSerializedChange={handleEditorChange}
-                      />
-                    </div>
+                    <QuillEditor
+                      key={editorKey}
+                      ref={editorRef}
+                      value={editorContent}
+                      onChange={handleEditorChange}
+                      placeholder="Start writing your blog content..."
+                      height="calc(100vh - 400px)"
+                      className="flex-1"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
