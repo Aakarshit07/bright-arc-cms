@@ -12,7 +12,7 @@ class ApiClient {
   private backendUrl: string;
 
   private constructor() {
-    this.backendUrl = "https://brightarcbackend-5p0v.onrender.com";
+    this.backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}`;
   }
 
   static getInstance(): ApiClient {

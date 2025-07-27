@@ -42,8 +42,9 @@ export default function SettingsPage() {
   const checkBackendStatus = async () => {
     try {
       const response = await fetch(
-        "https://brightarcbackend-5p0v.onrender.com/api/categories"
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/categories`
       );
+      console.log("Backend status check response:", response);
       setBackendStatus(response.ok ? "online" : "offline");
     } catch (error) {
       setBackendStatus("offline");
